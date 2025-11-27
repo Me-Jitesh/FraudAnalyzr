@@ -1,4 +1,4 @@
-package com.jitesh.FraudAnalyzr;
+package com.jitesh.fraudanalyzr;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

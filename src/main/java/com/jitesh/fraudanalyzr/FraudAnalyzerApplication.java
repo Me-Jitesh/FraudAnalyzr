@@ -1,4 +1,4 @@
-package com.jitesh.FraudAnalyzr;
+package com.jitesh.fraudanalyzr;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

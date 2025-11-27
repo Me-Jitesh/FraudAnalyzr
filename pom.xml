@@ -12,7 +12,7 @@
 
     <groupId>com.jitesh.analyzr</groupId>
     <artifactId>FraudAnalyzr</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0</version>
     <name>FraudAnalyzer</name>
     <description>Real Time Suspicious Detection Mechanism Using Kafka Stream</description>
 
