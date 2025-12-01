@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
+import java.util.Date;
 
 @Data
 @AllArgsConstructor
@@ -16,5 +16,5 @@ public class Transaction {
     private String accountId;
     private double amount;
     private String merchant;
-    private Instant timestamp;
+    private Date timestamp;
 }
