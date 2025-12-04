@@ -28,7 +28,7 @@ public class TransactionController {
     public ResponseEntity<?> makePayment(@RequestBody Transaction payment) {
         try {
             producerService.sendTransaction(payment);
-            log.info("☑ TXN Completed {}", payment.toString());
+            log.info("☑ TXN Sent :: {}", payment.toString());
             return ResponseEntity.ok("Transaction Completed  !");
         } catch (Exception e) {
             e.printStackTrace();
@@ -56,7 +56,7 @@ public class TransactionController {
                         .build();
 
                 producerService.sendTransaction(payment);
-                log.info("✅ Bulk TXN :: {}", payment.toString());
+                log.info("✅ Bulk TXN Sent :: {}", payment.toString());
 
             }
             log.info("Bulk Payment Done !");
