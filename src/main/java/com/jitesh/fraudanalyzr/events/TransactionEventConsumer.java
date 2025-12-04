@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class TransactionEventConsumer {
 
-    @KafkaListener(topics = "${app.topics.transactions}", groupId = "${app.consumer.group}")
+    @KafkaListener(topics = "${app.topics.transactions}", groupId = "${app.consumer.txn.group}")
     public void transactionConsumer(Transaction txEvents) {
         log.info("💰 TRANSACTION RECEIVED ::  {} ", txEvents);
     }

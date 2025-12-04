@@ -38,7 +38,7 @@ public class FraudDetectionProcessor {
         txnStream
                 .filter((key, tx) -> tx.getAmount() > 100000)
                 .peek((k, tx) -> {
-                    log.warn("⚠ FRAUD ALERT  For TXN  :: {} ", tx.toString());
+                    log.warn("⚠ FRAUD ALERT  SENT FOR TXN  :: {} ", tx.toString());
                 })
                 .to(ALERT_TOPIC, Produced.with(Serdes.String(), new TransactionSerde()));    // Write Suspicious To The Output Topic
 
