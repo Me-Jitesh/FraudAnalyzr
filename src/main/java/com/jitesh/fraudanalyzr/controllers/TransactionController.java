@@ -1,7 +1,7 @@
 package com.jitesh.fraudanalyzr.controllers;
 
 import com.jitesh.fraudanalyzr.models.Transaction;
-import com.jitesh.fraudanalyzr.services.TransactionProducerService;
+import com.jitesh.fraudanalyzr.events.TransactionEventProducer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,9 +18,9 @@ import java.util.UUID;
 @Slf4j
 public class TransactionController {
 
-    private final TransactionProducerService producerService;
+    private final TransactionEventProducer producerService;
 
-    public TransactionController(TransactionProducerService producerService) {
+    public TransactionController(TransactionEventProducer producerService) {
         this.producerService = producerService;
     }
 
@@ -42,7 +42,7 @@ public class TransactionController {
             for (int i = 0; i < 10; i++) {
                 String txnId = "TXN-" + System.currentTimeMillis() + i;
                 String accountId = "ACC-" + new Random().nextInt(100, 10000) + i;
-                double amt = Math.round(new Random().nextDouble(10000, 500000));
+                double amt = Math.round(new Random().nextDouble(1, 500000));
                 String vendor = "FLIPKART- " + UUID.randomUUID()
                         .toString()
                         .substring(0, 5);
