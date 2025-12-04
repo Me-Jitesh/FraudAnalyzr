@@ -28,11 +28,11 @@ public class FraudDetectionProcessor {
     @Bean
     public KStream<String, Transaction> txnAnalyzerWithObject(StreamsBuilder builder) {
 
-        JsonSerde<Transaction> jsonSerde = new JsonSerde<>(Transaction.class);
+//        JsonSerde<Transaction> jsonSerde = new JsonSerde<>(Transaction.class);
 
         // Read Message From The Input Topic
         KStream<String, Transaction> txnStream =
-                builder.stream(TOPIC, Consumed.with(Serdes.String(), jsonSerde));
+                builder.stream(TOPIC, Consumed.with(Serdes.String(), new TransactionSerde()));
 
         // Process The Stream To Detect a Fraudulent Transactions
         txnStream
@@ -40,7 +40,7 @@ public class FraudDetectionProcessor {
                 .peek((k, tx) -> {
                     log.warn("⚠ FRAUD ALERT  For TXN  :: {} ", tx.toString());
                 })
-                .to(ALERT_TOPIC, Produced.with(Serdes.String(), jsonSerde));    // Write Suspicious To The Output Topic
+                .to(ALERT_TOPIC, Produced.with(Serdes.String(), new TransactionSerde()));    // Write Suspicious To The Output Topic
 
         return txnStream;
     }
