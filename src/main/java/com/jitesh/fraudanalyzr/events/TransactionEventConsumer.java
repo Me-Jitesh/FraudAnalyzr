@@ -12,8 +12,14 @@ import org.springframework.stereotype.Service;
 public class TransactionEventConsumer {
 
     @KafkaListener(topics = "${app.topics.transactions}", groupId = "${app.consumer.txn.group}")
-    public void transactionConsumer(Transaction txEvents, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.OFFSET) String offset) {
-        log.info("💰 TRANSACTION RECEIVED ::  {} ", txEvents);
-        log.debug("ℹ TNX RECEIVED FROM TOPIC :: {}  AT OFFSET :: {} ", topic, offset);
+    public void transactionConsumer1(Transaction txEvents, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.OFFSET) String offset) {
+        log.info("💰 TRANSACTION RECEIVED IN CONSUMER 1 ::  {} ", txEvents);
+        log.debug("ℹ TNX RECEIVED FROM TOPIC IN CONSUMER 1 :: {}  AT OFFSET :: {} ", topic, offset);
+    }
+
+    @KafkaListener(topics = "${app.topics.transactions}", groupId = "${app.consumer.txn.group}")
+    public void transactionConsumer2(Transaction txEvents, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.OFFSET) String offset) {
+        log.info("💰 TRANSACTION RECEIVED IN CONSUMER 2 ::  {} ", txEvents);
+        log.debug("ℹ TNX RECEIVED FROM TOPIC IN CONSUMER 2 :: {}  AT OFFSET :: {} ", topic, offset);
     }
 }
