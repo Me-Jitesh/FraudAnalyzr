@@ -4,12 +4,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jitesh.fraudanalyzr.models.Transaction;
 import com.jitesh.fraudanalyzr.serdes.TransactionSerde;
+import com.jitesh.fraudanalyzr.services.FraudAlertServiceImpl;
+import com.jitesh.fraudanalyzr.services.StreamStatusServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +28,11 @@ public class FraudDetectionProcessor {
     @Value("${app.topics.fraud-alerts}")
     private String ALERT_TOPIC;
 
+    @Autowired
+    private FraudAlertServiceImpl fraudAlertService;
+    @Autowired
+    private StreamStatusServiceImpl streamStatusService;
+
     @Bean
     public KStream<String, Transaction> txnAnalyzerWithObject(StreamsBuilder builder) {
 
@@ -36,8 +44,10 @@ public class FraudDetectionProcessor {
 
         // Process The Stream To Detect a Fraudulent Transactions
         txnStream
+                .peek((k, tx) -> streamStatusService.incrementProcessed())
                 .filter((key, tx) -> tx.getAmount() > 100000)
                 .peek((k, tx) -> {
+                    fraudAlertService.publishAlert(tx);
                     log.warn("⚠ FRAUD ALERT  SENT FOR TXN  :: {} ", tx.toString());
                 })
                 .to(ALERT_TOPIC, Produced.with(Serdes.String(), new TransactionSerde()));    // Write Suspicious To The Output Topic
