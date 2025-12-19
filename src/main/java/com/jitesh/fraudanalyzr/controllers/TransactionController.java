@@ -64,4 +64,35 @@ public class TransactionController {
             return ResponseEntity.internalServerError().body("Transaction Failed  !");
         }
     }
+
+    @PostMapping("/pay/bulk/{num}")
+    public ResponseEntity<?> bulkPaymentNTimes(@PathVariable int num) {
+        try {
+            for (int i = 0; i < num; i++) {
+                String txnId = "TXN-" + System.currentTimeMillis() + i;
+                String accountId = "ACC-" + new Random().nextInt(100, 10000) + i;
+                double amt = Math.round(new Random().nextDouble(1, 500000));
+                String vendor = "PAYTM- " + UUID.randomUUID()
+                        .toString()
+                        .substring(0, 5);
+
+                Transaction payment = Transaction.builder()
+                        .transactionId(txnId)
+                        .accountId(accountId)
+                        .amount(amt)
+                        .merchant(vendor)
+                        .timestamp(new Date())
+                        .build();
+
+                producerService.sendTransaction(payment);
+                log.info("✅ BULK TXN {} TIME SENT :: {}", num, payment.toString());
+
+            }
+            log.info("Bulk Payment {} Time Done !", num);
+            return ResponseEntity.ok("Bulk Transaction N Time Completed  !");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Transaction Failed  !");
+        }
+    }
 }
