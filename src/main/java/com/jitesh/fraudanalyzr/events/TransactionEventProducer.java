@@ -15,8 +15,11 @@ public class TransactionEventProducer {
     @Autowired
     private KafkaTemplate<String, Transaction> kafkaTemplate;
 
-
     public void sendTransaction(Transaction txn) {
         kafkaTemplate.send(TOPIC, txn.getTransactionId(), txn);
+    }
+
+    public void sendTransactionToPartition(Transaction txn, int partition) {
+        kafkaTemplate.send(TOPIC, partition, txn.getTransactionId(), txn);
     }
 }
