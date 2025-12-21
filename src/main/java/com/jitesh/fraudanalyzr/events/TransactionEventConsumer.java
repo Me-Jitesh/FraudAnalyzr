@@ -8,6 +8,7 @@ import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.annotation.TopicPartition;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -26,7 +27,8 @@ public class TransactionEventConsumer {
         log.debug("ℹ TXN RECEIVED FROM TOPIC  :: {} IN CONSUMER 2 AT OFFSET :: {} ", topic, offset);
     }
 
-    @RetryableTopic(attempts = "4") // Retry 3 times (N-1)
+    @RetryableTopic(attempts = "4", backoff = @Backoff(delay = 5000, maxDelay = 5000 * 3, multiplier = 1.5))
+    // Retry 3 times (N-1)
     @KafkaListener(topics = "${app.topics.transactions}", groupId = "${app.consumer.txn.group}", topicPartitions = {@TopicPartition(topic = "${app.topics.transactions}", partitions = {"6"})})
     public void transactionConsumer3(Transaction txEvents, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.OFFSET) String offset) {
         log.info("💰 TRANSACTION RECEIVED IN CONSUMER 3 FROM SPECIFIC PARTITION 6 ::  {} ", txEvents);
