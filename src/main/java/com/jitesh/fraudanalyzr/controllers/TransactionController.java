@@ -26,7 +26,6 @@ public class TransactionController {
     public ResponseEntity<?> makePayment(@RequestBody Transaction payment) {
         try {
             producerService.sendTransaction(payment);
-            log.info("☑ TXN SENT :: {}", payment.toString());
             return ResponseEntity.ok("Transaction Completed  !");
         } catch (Exception e) {
             e.printStackTrace();
