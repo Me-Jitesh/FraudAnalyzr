@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -14,7 +15,10 @@ import java.util.Date;
 public class Transaction {
     private String transactionId;
     private String accountId;
-    private double amount;
+    private Double amount;
+    private String location;
+    private String type;
     private String merchant;
+    private List<Item> items;
     private Date timestamp;
 }
