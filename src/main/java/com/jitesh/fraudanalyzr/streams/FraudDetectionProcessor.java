@@ -19,7 +19,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
 @Slf4j
-@Configuration
+//@Configuration
 public class FraudDetectionProcessor {
 
     @Value("${app.topics.transactions}")
@@ -33,7 +33,7 @@ public class FraudDetectionProcessor {
     @Autowired
     private StreamStatusServiceImpl streamStatusService;
 
-    @Bean
+//    @Bean
     public KStream<String, Transaction> txnAnalyzerWithObject(StreamsBuilder builder) {
 
 //        JsonSerde<Transaction> jsonSerde = new JsonSerde<>(Transaction.class);

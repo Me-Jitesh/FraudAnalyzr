@@ -15,32 +15,32 @@ import org.springframework.stereotype.Service;
 @Service
 public class TransactionEventConsumer {
 
-    @KafkaListener(topics = "${app.topics.transactions}", groupId = "${app.consumer.txn.group}")
-    public void transactionConsumer1(Transaction txEvents, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.OFFSET) String offset) {
-        log.info("💰 TRANSACTION RECEIVED IN CONSUMER 1 ::  {} ", txEvents);
-        log.debug("ℹ TXN RECEIVED FROM TOPIC :: {} IN CONSUMER 1 AT OFFSET :: {} ", topic, offset);
-    }
-
-    @KafkaListener(topics = "${app.topics.transactions}", groupId = "${app.consumer.txn.group}")
-    public void transactionConsumer2(Transaction txEvents, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.OFFSET) String offset) {
-        log.info("💰 TRANSACTION RECEIVED IN CONSUMER 2 ::  {} ", txEvents);
-        log.debug("ℹ TXN RECEIVED FROM TOPIC  :: {} IN CONSUMER 2 AT OFFSET :: {} ", topic, offset);
-    }
-
-    @RetryableTopic(attempts = "4", backoff = @Backoff(delay = 5000, maxDelay = 5000 * 3, multiplier = 1.5))
-    // Retry 3 times (N-1)
-    @KafkaListener(topics = "${app.topics.transactions}",
-                                            groupId = "${app.consumer.txn.group}",
-                                            topicPartitions = {@TopicPartition(topic = "${app.topics.transactions}",
-                                            partitions = {"6"})},
-                                            properties = {"max.poll.records=1"}) // To Consume One Record At a Time in Concurrent or Batch Processing
-    public void transactionConsumer3(Transaction txEvents, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.OFFSET) String offset) {
-        log.info("💰 TRANSACTION RECEIVED IN CONSUMER 3 FROM SPECIFIC PARTITION 6 ::  {} ", txEvents);
-        log.debug("ℹ TXN RECEIVED FROM TOPIC  :: {} IN CONSUMER 3 AT OFFSET :: {} ", topic, offset);
-    }
-
-    @DltHandler
-    public void DLTListener(Transaction txEvents, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.OFFSET) String offset) {
-        log.info("🔔 DLT RECEIVED :: {} , FROM ::  {}, Offset :: {} ", txEvents, topic, offset);
-    }
+//    @KafkaListener(topics = "${app.topics.transactions}", groupId = "${app.consumer.txn.group}")
+//    public void transactionConsumer1(Transaction txEvents, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.OFFSET) String offset) {
+//        log.info("💰 TRANSACTION RECEIVED IN CONSUMER 1 ::  {} ", txEvents);
+//        log.debug("ℹ TXN RECEIVED FROM TOPIC :: {} IN CONSUMER 1 AT OFFSET :: {} ", topic, offset);
+//    }
+//
+//    @KafkaListener(topics = "${app.topics.transactions}", groupId = "${app.consumer.txn.group}")
+//    public void transactionConsumer2(Transaction txEvents, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.OFFSET) String offset) {
+//        log.info("💰 TRANSACTION RECEIVED IN CONSUMER 2 ::  {} ", txEvents);
+//        log.debug("ℹ TXN RECEIVED FROM TOPIC  :: {} IN CONSUMER 2 AT OFFSET :: {} ", topic, offset);
+//    }
+//
+//    @RetryableTopic(attempts = "4", backoff = @Backoff(delay = 5000, maxDelay = 5000 * 3, multiplier = 1.5))
+//    // Retry 3 times (N-1)
+//    @KafkaListener(topics = "${app.topics.transactions}",
+//                                            groupId = "${app.consumer.txn.group}",
+//                                            topicPartitions = {@TopicPartition(topic = "${app.topics.transactions}",
+//                                            partitions = {"6"})},
+//                                            properties = {"max.poll.records=1"}) // To Consume One Record At a Time in Concurrent or Batch Processing
+//    public void transactionConsumer3(Transaction txEvents, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.OFFSET) String offset) {
+//        log.info("💰 TRANSACTION RECEIVED IN CONSUMER 3 FROM SPECIFIC PARTITION 6 ::  {} ", txEvents);
+//        log.debug("ℹ TXN RECEIVED FROM TOPIC  :: {} IN CONSUMER 3 AT OFFSET :: {} ", topic, offset);
+//    }
+//
+//    @DltHandler
+//    public void DLTListener(Transaction txEvents, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic, @Header(KafkaHeaders.OFFSET) String offset) {
+//        log.info("🔔 DLT RECEIVED :: {} , FROM ::  {}, Offset :: {} ", txEvents, topic, offset);
+//    }
 }
