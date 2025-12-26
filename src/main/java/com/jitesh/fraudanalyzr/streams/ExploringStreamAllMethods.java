@@ -35,6 +35,11 @@ public class ExploringStreamAllMethods {
                     log.warn("☑ NORMAL TXN  :: {} {}", tx.getTransactionId(), tx.getAmount());
                 });
 
+        txnStream.filter((key, tx) -> tx.getAmount() > 100000)
+                .peek((k, tx) -> {
+                    log.warn("⚠ FRAUD TXN  :: {} {}", tx.getTransactionId(), tx.getAmount());
+                });
+
         return txnStream;
     }
 }
