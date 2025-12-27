@@ -4,6 +4,7 @@ import com.jitesh.fraudanalyzr.models.Transaction;
 import com.jitesh.fraudanalyzr.serdes.TransactionSerde;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
@@ -29,15 +30,23 @@ public class ExploringStreamAllMethods {
                 builder.stream(TOPIC, Consumed.with(Serdes.String(), new TransactionSerde()));
 
         // Process The Stream
-        txnStream
-                .filterNot((key, tx) -> tx.getAmount() > 100000)
-                .peek((k, tx) -> {
-                    log.warn("☑ NORMAL TXN  :: {} {}", tx.getTransactionId(), tx.getAmount());
-                });
 
-        txnStream.filter((key, tx) -> tx.getAmount() > 100000)
-                .peek((k, tx) -> {
-                    log.warn("⚠ FRAUD TXN  :: {} {}", tx.getTransactionId(), tx.getAmount());
+//        txnStream
+//                .filterNot((key, tx) -> tx.getAmount() > 100000)
+//                .peek((k, tx) -> {
+//                    log.warn("☑ NORMAL TXN  :: {} {}", tx.getTransactionId(), tx.getAmount());
+//                });
+
+//        txnStream.filter((key, tx) -> tx.getAmount() > 100000)
+//                .peek((k, tx) -> {
+//                    log.warn("⚠ FRAUD TXN  :: {} {}", tx.getTransactionId(), tx.getAmount());
+//                });
+
+        txnStream.map((key, tx) -> {
+                    return KeyValue.pair(tx.getAccountId(), "Spent Amount " + tx.getAmount());
+                })
+                .peek((key, val) -> {
+                    log.info("Modify Transaction Using Map  :: KEY {} , VALUE {}", key, val);
                 });
 
         return txnStream;
