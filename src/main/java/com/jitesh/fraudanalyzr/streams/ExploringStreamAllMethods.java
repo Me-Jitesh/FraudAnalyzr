@@ -42,11 +42,19 @@ public class ExploringStreamAllMethods {
 //                    log.warn("⚠ FRAUD TXN  :: {} {}", tx.getTransactionId(), tx.getAmount());
 //                });
 
-        txnStream.map((key, tx) -> {
-                    return KeyValue.pair(tx.getAccountId(), "Spent Amount " + tx.getAmount());
+//        txnStream.map((key, tx) -> {
+//                    return KeyValue.pair(tx.getAccountId(), "Spent Amount " + tx.getAmount());
+//                })
+//                .peek((key, val) -> {
+//                    log.info("Modify Transaction Using Map  :: KEY {} , VALUE {}", key, val);
+//                });
+
+        txnStream.mapValues((key, tx) -> {
+                    return "TXN Mode is  " + tx.getType();
+//                    return KeyValue.pair(tx.getAccountId(), "Spent Amount " + tx.getAmount()); // Still Only Modifies the Value not Key
                 })
                 .peek((key, val) -> {
-                    log.info("Modify Transaction Using Map  :: KEY {} , VALUE {}", key, val);
+                    log.info("Modify Transaction Value Only By Using MapValue  :: KEY {} , VALUE {}", key, val);
                 });
 
         return txnStream;
