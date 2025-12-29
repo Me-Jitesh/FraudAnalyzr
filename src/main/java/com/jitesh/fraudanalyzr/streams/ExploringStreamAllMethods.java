@@ -1,5 +1,6 @@
 package com.jitesh.fraudanalyzr.streams;
 
+import com.jitesh.fraudanalyzr.models.Item;
 import com.jitesh.fraudanalyzr.models.Transaction;
 import com.jitesh.fraudanalyzr.serdes.TransactionSerde;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,9 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Configuration
@@ -49,12 +53,24 @@ public class ExploringStreamAllMethods {
 //                    log.info("Modify Transaction Using Map  :: KEY {} , VALUE {}", key, val);
 //                });
 
-        txnStream.mapValues((key, tx) -> {
-                    return "TXN Mode is  " + tx.getType();
-//                    return KeyValue.pair(tx.getAccountId(), "Spent Amount " + tx.getAmount()); // Still Only Modifies the Value not Key
+//        txnStream.mapValues((key, tx) -> {
+//                    return "TXN Mode is  " + tx.getType();
+////                    return KeyValue.pair(tx.getAccountId(), "Spent Amount " + tx.getAmount()); // Still Only Modifies the Value not Key
+//                })
+//                .peek((key, val) -> {
+//                    log.info("Modify Transaction Value Only By Using MapValue  :: KEY {} , VALUE {}", key, val);
+//                });
+
+        txnStream.flatMap((key, tx) -> {
+                    List<KeyValue<String, Item>> flattened = new ArrayList<>();
+
+                    for (Item item : tx.getItems()) {
+                        flattened.add(KeyValue.pair(tx.getAccountId(), item));
+                    }
+                    return flattened;
                 })
                 .peek((key, val) -> {
-                    log.info("Modify Transaction Value Only By Using MapValue  :: KEY {} , VALUE {}", key, val);
+                    log.info("Flattened Nested Items  Using flatMap :: KEY {} , VALUE {}", key, val);
                 });
 
         return txnStream;
