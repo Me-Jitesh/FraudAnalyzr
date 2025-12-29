@@ -61,16 +61,24 @@ public class ExploringStreamAllMethods {
 //                    log.info("Modify Transaction Value Only By Using MapValue  :: KEY {} , VALUE {}", key, val);
 //                });
 
-        txnStream.flatMap((key, tx) -> {
-                    List<KeyValue<String, Item>> flattened = new ArrayList<>();
+//        txnStream.flatMap((key, tx) -> {
+//                    List<KeyValue<String, Item>> flattened = new ArrayList<>();
+//
+//                    for (Item item : tx.getItems()) {
+//                        flattened.add(KeyValue.pair(tx.getAccountId(), item));
+//                    }
+//                    return flattened;
+//                })
+//                .peek((key, val) -> {
+//                    log.info("Flattened Nested Items  Using flatMap :: KEY {} , VALUE {}", key, val);
+//                });
 
-                    for (Item item : tx.getItems()) {
-                        flattened.add(KeyValue.pair(tx.getAccountId(), item));
-                    }
-                    return flattened;
+//        txnStream.flatMapValues(Transaction::getItems)
+        txnStream.flatMapValues(tx -> {
+                    return tx.getItems();
                 })
                 .peek((key, val) -> {
-                    log.info("Flattened Nested Items  Using flatMap :: KEY {} , VALUE {}", key, val);
+                    log.info("Flattened Nested Items Only Values  Using flatMapValues :: KEY {} , VALUE {}", key, val);
                 });
 
         return txnStream;
