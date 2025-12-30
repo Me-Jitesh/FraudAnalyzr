@@ -9,6 +9,8 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.Produced;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,12 +28,15 @@ public class ExploringStreamAllMethods {
     @Value("${app.topics.fraud-alerts}")
     private String ALERT_TOPIC;
 
+    @Autowired
+    private TransactionSerde transactionSerde;
+
     @Bean
     public KStream<String, Transaction> txnAnalyzer(StreamsBuilder builder) {
 
         // Read Message From The Input Topic
         KStream<String, Transaction> txnStream =
-                builder.stream(TOPIC, Consumed.with(Serdes.String(), new TransactionSerde()));
+                builder.stream(TOPIC, Consumed.with(Serdes.String(), transactionSerde));
 
         // Process The Stream
 
@@ -74,12 +79,39 @@ public class ExploringStreamAllMethods {
 //                });
 
 //        txnStream.flatMapValues(Transaction::getItems)
-        txnStream.flatMapValues(tx -> {
-                    return tx.getItems();
-                })
-                .peek((key, val) -> {
-                    log.info("Flattened Nested Items Only Values  Using flatMapValues :: KEY {} , VALUE {}", key, val);
-                });
+//        txnStream.flatMapValues(tx -> {
+//                    return tx.getItems();
+//                })
+//                .peek((key, val) -> {
+//                    log.info("Flattened Nested Items Only Values  Using flatMapValues :: KEY {} , VALUE {}", key, val);
+//                });
+
+        KStream<String, Transaction>[] branches = txnStream.branch(
+                (key, tx) -> tx.getType().equalsIgnoreCase("Debit"),
+                (key, tx) -> tx.getType().equalsIgnoreCase("Credit"),
+                (key, tx) -> tx.getType().equalsIgnoreCase("UPI"),
+                (key, tx) -> tx.getType().equalsIgnoreCase("Wallet")
+        );
+
+        branches[0].peek(
+                        (k, tx) -> log.info("💳 Transaction Using :: {}", tx.getType())
+                )
+                .to("debit_txn", Produced.with(Serdes.String(), transactionSerde));
+
+        branches[1].peek(
+                        (k, tx) -> log.info("💳 Transaction Using :: {}", tx.getType())
+                )
+                .to("credit_txn", Produced.with(Serdes.String(), transactionSerde));
+
+        branches[2].peek(
+                        (k, tx) -> log.info("💳 Transaction Using :: {}", tx.getType())
+                )
+                .to("upi_txn", Produced.with(Serdes.String(), transactionSerde));
+
+        branches[3].peek(
+                        (k, tx) -> log.info("💳 Transaction Using :: {}", tx.getType())
+                )
+                .to("wallet_txn", Produced.with(Serdes.String(), transactionSerde));
 
         return txnStream;
     }
