@@ -86,32 +86,40 @@ public class ExploringStreamAllMethods {
 //                    log.info("Flattened Nested Items Only Values  Using flatMapValues :: KEY {} , VALUE {}", key, val);
 //                });
 
-        KStream<String, Transaction>[] branches = txnStream.branch(
-                (key, tx) -> tx.getType().equalsIgnoreCase("Debit"),
-                (key, tx) -> tx.getType().equalsIgnoreCase("Credit"),
-                (key, tx) -> tx.getType().equalsIgnoreCase("UPI"),
-                (key, tx) -> tx.getType().equalsIgnoreCase("Wallet")
-        );
+//        KStream<String, Transaction>[] branches = txnStream.branch(
+//                (key, tx) -> tx.getType().equalsIgnoreCase("Debit"),
+//                (key, tx) -> tx.getType().equalsIgnoreCase("Credit"),
+//                (key, tx) -> tx.getType().equalsIgnoreCase("UPI"),
+//                (key, tx) -> tx.getType().equalsIgnoreCase("Wallet")
+//        );
+//
+//        branches[0].peek(
+//                        (k, tx) -> log.info("💳 Transaction Using :: {}", tx.getType())
+//                )
+//                .to("debit_txn", Produced.with(Serdes.String(), transactionSerde));
+//
+//        branches[1].peek(
+//                        (k, tx) -> log.info("💳 Transaction Using :: {}", tx.getType())
+//                )
+//                .to("credit_txn", Produced.with(Serdes.String(), transactionSerde));
+//
+//        branches[2].peek(
+//                        (k, tx) -> log.info("💳 Transaction Using :: {}", tx.getType())
+//                )
+//                .to("upi_txn", Produced.with(Serdes.String(), transactionSerde));
+//
+//        branches[3].peek(
+//                        (k, tx) -> log.info("💳 Transaction Using :: {}", tx.getType())
+//                )
+//                .to("wallet_txn", Produced.with(Serdes.String(), transactionSerde));
 
-        branches[0].peek(
-                        (k, tx) -> log.info("💳 Transaction Using :: {}", tx.getType())
-                )
-                .to("debit_txn", Produced.with(Serdes.String(), transactionSerde));
-
-        branches[1].peek(
-                        (k, tx) -> log.info("💳 Transaction Using :: {}", tx.getType())
-                )
-                .to("credit_txn", Produced.with(Serdes.String(), transactionSerde));
-
-        branches[2].peek(
-                        (k, tx) -> log.info("💳 Transaction Using :: {}", tx.getType())
-                )
-                .to("upi_txn", Produced.with(Serdes.String(), transactionSerde));
-
-        branches[3].peek(
-                        (k, tx) -> log.info("💳 Transaction Using :: {}", tx.getType())
-                )
-                .to("wallet_txn", Produced.with(Serdes.String(), transactionSerde));
+        txnStream
+                .groupBy((k, tx) -> tx.getLocation())
+                .count()
+                .toStream()
+                .peek((locale, freq) -> {
+                    log.info("🌏 Country :: {} has {} Transactions", locale, freq);
+                });
 
         return txnStream;
     }
