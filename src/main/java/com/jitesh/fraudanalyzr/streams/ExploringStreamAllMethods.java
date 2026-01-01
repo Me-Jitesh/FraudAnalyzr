@@ -113,12 +113,20 @@ public class ExploringStreamAllMethods {
 //                )
 //                .to("wallet_txn", Produced.with(Serdes.String(), transactionSerde));
 
+//        txnStream
+//                .groupBy((k, tx) -> tx.getLocation())
+//                .count()
+//                .toStream()
+//                .peek((locale, freq) -> {
+//                    log.info("🌏 Country :: {} has {} Transactions", locale, freq);
+//                });
+
         txnStream
-                .groupBy((k, tx) -> tx.getLocation())
+                .groupBy((k, tx) -> tx.getAccountId())
                 .count()
                 .toStream()
-                .peek((locale, freq) -> {
-                    log.info("🌏 Country :: {} has {} Transactions", locale, freq);
+                .peek((account, count) -> {
+                    log.info("👤 User {} Made {} Transactions", account, count);
                 });
 
         return txnStream;
