@@ -9,6 +9,7 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Produced;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -121,9 +122,17 @@ public class ExploringStreamAllMethods {
 //                    log.info("🌏 Country :: {} has {} Transactions", locale, freq);
 //                });
 
-        txnStream
+//        txnStream
+//                .groupBy((k, tx) -> tx.getAccountId())
+//                .count()
+//                .toStream()
+//                .peek((account, count) -> {
+//                    log.info("👤 User {} Made {} Transactions", account, count);
+//                });
+
+                txnStream
                 .groupBy((k, tx) -> tx.getAccountId())
-                .count()
+                .count(Materialized.as("user-txn-count-store"))
                 .toStream()
                 .peek((account, count) -> {
                     log.info("👤 User {} Made {} Transactions", account, count);
