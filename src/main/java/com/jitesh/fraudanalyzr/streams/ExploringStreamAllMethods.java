@@ -130,13 +130,26 @@ public class ExploringStreamAllMethods {
 //                    log.info("👤 User {} Made {} Transactions", account, count);
 //                });
 
-                txnStream
-                .groupBy((k, tx) -> tx.getAccountId())
-                .count(Materialized.as("user-txn-count-store"))
+//                txnStream
+//                .groupBy((k, tx) -> tx.getAccountId())
+//                .count(Materialized.as("user-txn-count-store"))
+//                .toStream()
+//                .peek((account, count) -> {
+//                    log.info("👤 User {} Made {} Transactions", account, count);
+//                });
+
+        txnStream
+                .groupBy((key, tx) -> tx.getType())
+                .aggregate(
+                        () -> 0.0,
+                        (mode, txn, accumulator) -> accumulator + txn.getAmount(),
+                        Materialized.with(Serdes.String(), Serdes.Double())
+                )
                 .toStream()
-                .peek((account, count) -> {
-                    log.info("👤 User {} Made {} Transactions", account, count);
-                });
+                .peek((mode, sum) -> {
+                            log.info("💳 Payment Mode :: {} | 💰 Running Total Amount :: {}", mode, sum);
+                        }
+                );
 
         return txnStream;
     }
