@@ -7,15 +7,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Materialized;
-import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -138,18 +136,47 @@ public class ExploringStreamAllMethods {
 //                    log.info("👤 User {} Made {} Transactions", account, count);
 //                });
 
+//        txnStream
+//                .groupBy((key, tx) -> tx.getType())
+//                .aggregate(
+//                        () -> 0.0,
+//                        (mode, txn, accumulator) -> accumulator + txn.getAmount(),
+//                        Materialized.with(Serdes.String(), Serdes.Double())
+//                )
+//                .toStream()
+//                .peek((mode, sum) -> {
+//                            log.info("💳 Payment Mode :: {} | 💰 Running Total Amount :: {}", mode, sum);
+//                        }
+//                );
+
         txnStream
-                .groupBy((key, tx) -> tx.getType())
-                .aggregate(
-                        () -> 0.0,
-                        (mode, txn, accumulator) -> accumulator + txn.getAmount(),
-                        Materialized.with(Serdes.String(), Serdes.Double())
+                .groupBy(
+                        (key, tx) -> tx.getAccountId(),
+                        Grouped.with(Serdes.String(), transactionSerde)
                 )
+
+                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
+
+                .count()
+
                 .toStream()
-                .peek((mode, sum) -> {
-                            log.info("💳 Payment Mode :: {} | 💰 Running Total Amount :: {}", mode, sum);
+
+                .peek((windowedKey, count) -> {
+
+                            String accountId = windowedKey.key();
+
+                            log.info("👥 Account No :: {} | 💴 Txn Count :: {} | ⌛ Time Window = [{} - {}]",
+                                    accountId,
+                                    count,
+                                    windowedKey.window().startTime(),
+                                    windowedKey.window().endTime());
+
+                            if (count > 3) {
+                                log.error("🚨 FRAUD ALERT ::  Account No = {} made {} transactions Within 10 Seconds Window", accountId, count);
+                            }
                         }
-                );
+                )
+                .to("user-txn-counts", Produced.with(WindowedSerdes.sessionWindowedSerdeFrom(String.class), Serdes.Long()));
 
         return txnStream;
     }
