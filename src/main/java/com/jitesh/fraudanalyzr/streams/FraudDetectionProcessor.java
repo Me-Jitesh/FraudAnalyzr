@@ -9,17 +9,17 @@ import com.jitesh.fraudanalyzr.services.StreamStatusServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.support.serializer.JsonSerde;
 
+import java.time.Duration;
+
 @Slf4j
-//@Configuration
+@Configuration
 public class FraudDetectionProcessor {
 
     @Value("${app.topics.transactions}")
@@ -33,7 +33,7 @@ public class FraudDetectionProcessor {
     @Autowired
     private StreamStatusServiceImpl streamStatusService;
 
-//    @Bean
+    @Bean
     public KStream<String, Transaction> txnAnalyzerWithObject(StreamsBuilder builder) {
 
 //        JsonSerde<Transaction> jsonSerde = new JsonSerde<>(Transaction.class);
@@ -52,8 +52,38 @@ public class FraudDetectionProcessor {
                 })
                 .to(ALERT_TOPIC, Produced.with(Serdes.String(), new TransactionSerde()));    // Write Suspicious To The Output Topic
 
+        txnStream
+                .groupBy(
+                        (key, tx) -> tx.getAccountId(),
+                        Grouped.with(Serdes.String(), new TransactionSerde())
+                )
+
+                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
+
+                .count()
+
+                .toStream()
+
+                .peek((windowedKey, count) -> {
+
+                            String accountId = windowedKey.key();
+
+                            log.info("👥 Account No :: {} | 💴 Txn Count :: {} | ⌛ Time Window = [{} - {}]",
+                                    accountId,
+                                    count,
+                                    windowedKey.window().startTime(),
+                                    windowedKey.window().endTime());
+
+                            if (count > 3) {
+                                log.error("🚨 FRAUD ALERT ::  Account No = {} made {} transactions Within 10 Seconds Window", accountId, count);
+                            }
+                        }
+                )
+                .to("user-txn-counts", Produced.with(WindowedSerdes.sessionWindowedSerdeFrom(String.class), Serdes.Long()));
+
         return txnStream;
     }
+
 
 //    @Bean
 //    public KStream<String, String> txnAnalyzer(StreamsBuilder builder) {
@@ -72,13 +102,14 @@ public class FraudDetectionProcessor {
 //        return txnStream;
 //    }
 
-    private boolean isSuspicious(String val) {
-        try {
-            Transaction txn = new ObjectMapper().readValue(val, Transaction.class); // Validate Json
-            return txn.getAmount() > 100000; // Fraud Rule
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
+//    private boolean isSuspicious(String val) {
+//        try {
+//            Transaction txn = new ObjectMapper().readValue(val, Transaction.class); // Validate Json
+//            return txn.getAmount() > 100000; // Fraud Rule
+//        } catch (JsonProcessingException e) {
+//            e.printStackTrace();
+//            return false;
+//        }
+//    }
 }
+
