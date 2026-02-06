@@ -15,14 +15,14 @@ public class KafkaTopicConfig {
     @Value("${app.topics.fraud-alerts}")
     private String fraudAlerts;
 
-//    @Bean
-//    public NewTopic transactionsTopic() {
-//        return TopicBuilder.name(transactions).partitions(2).replicas(1).build();
-//    }
-//
-//    @Bean
-//    public NewTopic fraudAlertsTopic() {
-//        return TopicBuilder.name(fraudAlerts).partitions(2).replicas(1).build();
-//    }
+    @Bean
+    public NewTopic transactionsTopic() {
+        return TopicBuilder.name(transactions).partitions(2).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic fraudAlertsTopic() {
+        return TopicBuilder.name(fraudAlerts).partitions(2).replicas(1).build();
+    }
 
 }
