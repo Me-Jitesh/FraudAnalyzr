@@ -5,9 +5,6 @@ import com.jitesh.fraudanalyzr.models.Transaction;
 import com.jitesh.fraudanalyzr.serdes.TransactionSerde;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -30,12 +27,12 @@ public class ExploringStreamAllMethods {
     @Autowired
     private TransactionSerde transactionSerde;
 
-    @Bean
-    public KStream<String, Transaction> txnAnalyzer(StreamsBuilder builder) {
-
-        // Read Message From The Input Topic
-        KStream<String, Transaction> txnStream =
-                builder.stream(TOPIC, Consumed.with(Serdes.String(), transactionSerde));
+//    @Bean
+//    public KStream<String, Transaction> txnAnalyzer(StreamsBuilder builder) {
+//
+//        // Read Message From The Input Topic
+//        KStream<String, Transaction> txnStream =
+//                builder.stream(TOPIC, Consumed.with(Serdes.String(), transactionSerde));
 
         // Process The Stream
 
@@ -149,35 +146,35 @@ public class ExploringStreamAllMethods {
 //                        }
 //                );
 
-        txnStream
-                .groupBy(
-                        (key, tx) -> tx.getAccountId(),
-                        Grouped.with(Serdes.String(), transactionSerde)
-                )
-
-                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
-
-                .count()
-
-                .toStream()
-
-                .peek((windowedKey, count) -> {
-
-                            String accountId = windowedKey.key();
-
-                            log.info("👥 Account No :: {} | 💴 Txn Count :: {} | ⌛ Time Window = [{} - {}]",
-                                    accountId,
-                                    count,
-                                    windowedKey.window().startTime(),
-                                    windowedKey.window().endTime());
-
-                            if (count > 3) {
-                                log.error("🚨 FRAUD ALERT ::  Account No = {} made {} transactions Within 10 Seconds Window", accountId, count);
-                            }
-                        }
-                )
-                .to("user-txn-counts", Produced.with(WindowedSerdes.sessionWindowedSerdeFrom(String.class), Serdes.Long()));
-
-        return txnStream;
-    }
+//        txnStream
+//                .groupBy(
+//                        (key, tx) -> tx.getAccountId(),
+//                        Grouped.with(Serdes.String(), transactionSerde)
+//                )
+//
+//                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
+//
+//                .count()
+//
+//                .toStream()
+//
+//                .peek((windowedKey, count) -> {
+//
+//                            String accountId = windowedKey.key();
+//
+//                            log.info("👥 Account No :: {} | 💴 Txn Count :: {} | ⌛ Time Window = [{} - {}]",
+//                                    accountId,
+//                                    count,
+//                                    windowedKey.window().startTime(),
+//                                    windowedKey.window().endTime());
+//
+//                            if (count > 3) {
+//                                log.error("🚨 FRAUD ALERT ::  Account No = {} made {} transactions Within 10 Seconds Window", accountId, count);
+//                            }
+//                        }
+//                )
+//                .to("user-txn-counts", Produced.with(WindowedSerdes.sessionWindowedSerdeFrom(String.class), Serdes.Long()));
+//
+//        return txnStream;
+//    }
 }

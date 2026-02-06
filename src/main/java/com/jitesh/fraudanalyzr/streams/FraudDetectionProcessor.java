@@ -8,8 +8,6 @@ import com.jitesh.fraudanalyzr.services.FraudAlertServiceImpl;
 import com.jitesh.fraudanalyzr.services.StreamStatusServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -33,56 +31,56 @@ public class FraudDetectionProcessor {
     @Autowired
     private StreamStatusServiceImpl streamStatusService;
 
-    @Bean
-    public KStream<String, Transaction> txnAnalyzerWithObject(StreamsBuilder builder) {
-
-//        JsonSerde<Transaction> jsonSerde = new JsonSerde<>(Transaction.class);
-
-        // Read Message From The Input Topic
-        KStream<String, Transaction> txnStream =
-                builder.stream(TOPIC, Consumed.with(Serdes.String(), new TransactionSerde()));
-
-        // Process The Stream To Detect a Fraudulent Transactions
-        txnStream
-                .peek((k, tx) -> streamStatusService.incrementProcessed())
-                .filter((key, tx) -> tx.getAmount() > 100000)
-                .peek((k, tx) -> {
-                    fraudAlertService.publishAlert(tx);
-                    log.warn("⚠ FRAUD ALERT  SENT FOR TXN  :: {} ", tx.toString());
-                })
-                .to(ALERT_TOPIC, Produced.with(Serdes.String(), new TransactionSerde()));    // Write Suspicious To The Output Topic
-
-        txnStream
-                .groupBy(
-                        (key, tx) -> tx.getAccountId(),
-                        Grouped.with(Serdes.String(), new TransactionSerde())
-                )
-
-                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
-
-                .count()
-
-                .toStream()
-
-                .peek((windowedKey, count) -> {
-
-                            String accountId = windowedKey.key();
-
-                            log.info("👥 Account No :: {} | 💴 Txn Count :: {} | ⌛ Time Window = [{} - {}]",
-                                    accountId,
-                                    count,
-                                    windowedKey.window().startTime(),
-                                    windowedKey.window().endTime());
-
-                            if (count > 3) {
-                                log.error("🚨 FRAUD ALERT ::  Account No = {} made {} transactions Within 10 Seconds Window", accountId, count);
-                            }
-                        }
-                )
-                .to("user-txn-counts", Produced.with(WindowedSerdes.sessionWindowedSerdeFrom(String.class), Serdes.Long()));
-
-        return txnStream;
-    }
+//    @Bean
+//    public KStream<String, Transaction> txnAnalyzerWithObject(StreamsBuilder builder) {
+//
+////        JsonSerde<Transaction> jsonSerde = new JsonSerde<>(Transaction.class);
+//
+//        // Read Message From The Input Topic
+//        KStream<String, Transaction> txnStream =
+//                builder.stream(TOPIC, Consumed.with(Serdes.String(), new TransactionSerde()));
+//
+//        // Process The Stream To Detect a Fraudulent Transactions
+//        txnStream
+//                .peek((k, tx) -> streamStatusService.incrementProcessed())
+//                .filter((key, tx) -> tx.getAmount() > 100000)
+//                .peek((k, tx) -> {
+//                    fraudAlertService.publishAlert(tx);
+//                    log.warn("⚠ FRAUD ALERT  SENT FOR TXN  :: {} ", tx.toString());
+//                })
+//                .to(ALERT_TOPIC, Produced.with(Serdes.String(), new TransactionSerde()));    // Write Suspicious To The Output Topic
+//
+//        txnStream
+//                .groupBy(
+//                        (key, tx) -> tx.getAccountId(),
+//                        Grouped.with(Serdes.String(), new TransactionSerde())
+//                )
+//
+//                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
+//
+//                .count()
+//
+//                .toStream()
+//
+//                .peek((windowedKey, count) -> {
+//
+//                            String accountId = windowedKey.key();
+//
+//                            log.info("👥 Account No :: {} | 💴 Txn Count :: {} | ⌛ Time Window = [{} - {}]",
+//                                    accountId,
+//                                    count,
+//                                    windowedKey.window().startTime(),
+//                                    windowedKey.window().endTime());
+//
+//                            if (count > 3) {
+//                                log.error("🚨 FRAUD ALERT ::  Account No = {} made {} transactions Within 10 Seconds Window", accountId, count);
+//                            }
+//                        }
+//                )
+//                .to("user-txn-counts", Produced.with(WindowedSerdes.sessionWindowedSerdeFrom(String.class), Serdes.Long()));
+//
+//        return txnStream;
+//    }
 
 
 //    @Bean
