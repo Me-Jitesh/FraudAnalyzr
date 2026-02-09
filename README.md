@@ -6,6 +6,8 @@ A real-time transaction fraud detection system built using Apache Kafka Streams 
 The system processes financial transactions as a live stream, detects suspicious activity, and publishes fraud alerts
 instantly.
 
+## 🌐 Live Demo [Fraud Analyzr](https://fraud-analyzr.vercel.app/)
+
 > ✨ Key Features
 
 ⚡ Real-time transaction processing
