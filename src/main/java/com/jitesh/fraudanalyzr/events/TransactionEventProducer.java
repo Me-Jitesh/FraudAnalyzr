@@ -21,12 +21,12 @@ public class TransactionEventProducer {
     private KafkaTemplate<String, Transaction> kafkaTemplate;
 
     public void sendTransaction(Transaction txn) {
-        kafkaTemplate.send(TOPIC, txn.getTransactionId(), txn);
+        kafkaTemplate.send(TOPIC, txn.getAccountId(), txn);
     }
 
     public void sendTransactionToPartition(Transaction txn, int partition) {
 
-        CompletableFuture<SendResult<String, Transaction>> future = kafkaTemplate.send(TOPIC, partition, txn.getTransactionId(), txn);
+        CompletableFuture<SendResult<String, Transaction>> future = kafkaTemplate.send(TOPIC, partition, txn.getAccountId(), txn);
 
         // Wait For Result
 //        future.get();

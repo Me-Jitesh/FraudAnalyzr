@@ -1,20 +1,18 @@
 package com.jitesh.fraudanalyzr.streams;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jitesh.fraudanalyzr.models.Transaction;
 import com.jitesh.fraudanalyzr.serdes.TransactionSerde;
 import com.jitesh.fraudanalyzr.services.FraudAlertServiceImpl;
 import com.jitesh.fraudanalyzr.services.StreamStatusServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.kafka.support.serializer.JsonSerde;
 
 import java.time.Duration;
 
@@ -23,92 +21,77 @@ import java.time.Duration;
 public class FraudDetectionProcessor {
 
     @Value("${app.topics.transactions}")
-    private String TOPIC;
+    private String TRANSACTION_TOPIC;
 
     @Value("${app.topics.fraud-alerts}")
     private String ALERT_TOPIC;
 
     @Autowired
     private FraudAlertServiceImpl fraudAlertService;
+
     @Autowired
     private StreamStatusServiceImpl streamStatusService;
 
     @Bean
-    public KStream<String, Transaction> txnAnalyzerWithObject(StreamsBuilder builder) {
+    public KStream<String, Transaction> txnAnalyzer(StreamsBuilder builder) {
 
-//        JsonSerde<Transaction> jsonSerde = new JsonSerde<>(Transaction.class);
+        TransactionSerde transactionSerde = new TransactionSerde();
 
-        // Read Message From The Input Topic
+        // 1️⃣ Read stream (Key MUST be accountId from producer)
         KStream<String, Transaction> txnStream =
-                builder.stream(TOPIC, Consumed.with(Serdes.String(), new TransactionSerde()));
+                builder.stream(
+                        TRANSACTION_TOPIC,
+                        Consumed.with(Serdes.String(), transactionSerde)
+                );
 
-        // Process The Stream To Detect a Fraudulent Transactions
-        txnStream
-                .peek((k, tx) -> streamStatusService.incrementProcessed())
-                .filter((key, tx) -> tx.getAmount() > 100000)
-                .peek((k, tx) -> {
+        txnStream.peek((k, v) -> streamStatusService.incrementProcessed());
+
+
+        //  2️⃣ High Amount Fraud Rule
+
+        KStream<String, Transaction> highAmountFraudStream =
+                txnStream.filter((key, tx) -> tx.getAmount() > 100000);
+
+        // 3️⃣ High Velocity Fraud Rule (>3 txns in 10 sec)
+        // Since key = accountId already,
+        // NO groupBy() needed → NO repartition topic created
+
+        KStream<String, Transaction> rapidTxnFraudStream =
+                txnStream
+                        .groupByKey(Grouped.with(Serdes.String(), transactionSerde))
+                        .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
+                        .count(Materialized.as("txn-count-store"))
+                        .toStream()
+                        .filter((windowedKey, count) -> count > 3)
+                        .map((windowedKey, count) ->
+                                KeyValue.pair(windowedKey.key(), windowedKey.key())
+                        )
+                        .join(
+                                txnStream,
+                                (key, transaction) -> transaction,
+                                JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
+                                StreamJoined.with(
+                                        Serdes.String(),
+                                        Serdes.String(),
+                                        transactionSerde
+                                )
+                        );
+
+        // 4️⃣ Merge Both Fraud Streams
+
+        KStream<String, Transaction> combinedFraudStream =
+                highAmountFraudStream.merge(rapidTxnFraudStream);
+
+        // 5️⃣ Send to Fraud Alert Topic
+
+        combinedFraudStream
+                .peek((key, tx) -> {
                     fraudAlertService.publishAlert(tx);
-                    log.warn("⚠ FRAUD ALERT  SENT FOR TXN  :: {} ", tx.toString());
+                    log.warn("🚨 FRAUD DETECTED :: {}", tx);
                 })
-                .to(ALERT_TOPIC, Produced.with(Serdes.String(), new TransactionSerde()));    // Write Suspicious To The Output Topic
-
-//        txnStream
-//                .groupBy(
-//                        (key, tx) -> tx.getAccountId(),
-//                        Grouped.with(Serdes.String(), new TransactionSerde())
-//                )
-//
-//                .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
-//
-//                .count()
-//
-//                .toStream()
-//
-//                .peek((windowedKey, count) -> {
-//
-//                            String accountId = windowedKey.key();
-//
-//                            log.info("👥 Account No :: {} | 💴 Txn Count :: {} | ⌛ Time Window = [{} - {}]",
-//                                    accountId,
-//                                    count,
-//                                    windowedKey.window().startTime(),
-//                                    windowedKey.window().endTime());
-//
-//                            if (count > 3) {
-//                                log.error("🚨 FRAUD ALERT ::  Account No = {} made {} transactions Within 10 Seconds Window", accountId, count);
-//                            }
-//                        }
-//                )
-//                .to("user-txn-counts", Produced.with(WindowedSerdes.sessionWindowedSerdeFrom(String.class), Serdes.Long()));
+                .to(ALERT_TOPIC,
+                        Produced.with(Serdes.String(), transactionSerde));
 
         return txnStream;
     }
-
-//    @Bean
-//    public KStream<String, String> txnAnalyzer(StreamsBuilder builder) {
-//
-//        // Read Message From The Input Topic
-//        KStream<String, String> txnStream = builder.stream(TOPIC);
-//
-//        // Process The Stream To Detect a Fraudulent Transactions
-//        KStream<String, String> fraudTxn = txnStream.filter((key, val) -> isSuspicious(val)).peek((k, v) -> {
-//            log.warn("⚠ FRAUD ALERT :: transactionId={}, Value={}", k, v);
-//        });
-//
-//        // Write Suspicious To The Output Topic
-//        fraudTxn.to(ALERT_TOPIC);
-//
-//        return txnStream;
-//    }
-
-//    private boolean isSuspicious(String val) {
-//        try {
-//            Transaction txn = new ObjectMapper().readValue(val, Transaction.class); // Validate Json
-//            return txn.getAmount() > 100000; // Fraud Rule
-//        } catch (JsonProcessingException e) {
-//            e.printStackTrace();
-//            return false;
-//        }
-//    }
 }
-

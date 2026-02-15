@@ -27,7 +27,7 @@ public class FraudAlertServiceImpl {
                 .build();
 
         alerts.add(alert);
-        log.warn("🚨 Fraud Alert Stored :: {}", alert);
+//        log.warn("🚨 Fraud Alert Stored :: {}", alert);
     }
 
 }
