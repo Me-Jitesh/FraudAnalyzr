@@ -80,10 +80,9 @@ public class TransactionController {
                         .build();
 
                 producerService.sendTransaction(payment);
-                log.info("✅ BULK TXN SENT :: {}", payment.toString());
-
+                Thread.sleep(1000 * 2);
             }
-            log.info("Bulk Payment Done !");
+            log.info("✅ BULK PAYMENT DONE !");
             return ResponseEntity.ok("Bulk Transaction Completed  !");
         } catch (Exception e) {
             e.printStackTrace();
@@ -137,8 +136,7 @@ public class TransactionController {
                         .build();
 
                 producerService.sendTransaction(payment);
-                log.info("✅ BULK TXN {} TIME SENT :: {}", num, payment.toString());
-
+                Thread.sleep(1000 * 2);
             }
             log.info("Bulk Payment {} Time Done !", num);
             return ResponseEntity.ok("Bulk Transaction N Time Completed  !");

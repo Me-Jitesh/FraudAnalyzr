@@ -1,5 +1,6 @@
 package com.jitesh.fraudanalyzr.services;
 
+import com.jitesh.fraudanalyzr.constants.FraudType;
 import com.jitesh.fraudanalyzr.models.FraudAlert;
 import com.jitesh.fraudanalyzr.models.Transaction;
 import lombok.Getter;
@@ -10,24 +11,22 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-@Getter
-@Slf4j
 @Service
+@Slf4j
+@Getter
 public class FraudAlertServiceImpl {
 
-    // Later → DB / Elasticsearch
     private final List<FraudAlert> alerts = new CopyOnWriteArrayList<>();
 
-    public void publishAlert(Transaction tx) {
+    public void publishAlert(Transaction tx, FraudType fraudType) {
+
         FraudAlert alert = FraudAlert.builder()
                 .accountId(tx.getAccountId())
                 .transactionId(tx.getTransactionId())
-                .reason("HIGH_AMOUNT")
+                .reason(fraudType.name())
                 .detectedAt(new Date())
                 .build();
 
         alerts.add(alert);
-//        log.warn("🚨 Fraud Alert Stored :: {}", alert);
     }
-
 }

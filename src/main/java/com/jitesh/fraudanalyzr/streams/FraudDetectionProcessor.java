@@ -1,5 +1,6 @@
 package com.jitesh.fraudanalyzr.streams;
 
+import com.jitesh.fraudanalyzr.constants.FraudType;
 import com.jitesh.fraudanalyzr.models.Transaction;
 import com.jitesh.fraudanalyzr.serdes.TransactionSerde;
 import com.jitesh.fraudanalyzr.services.FraudAlertServiceImpl;
@@ -50,7 +51,10 @@ public class FraudDetectionProcessor {
         //  2️⃣ High Amount Fraud Rule
 
         KStream<String, Transaction> highAmountFraudStream =
-                txnStream.filter((key, tx) -> tx.getAmount() > 100000);
+                txnStream.filter((key, tx) -> tx.getAmount() > 300000)
+                        .peek((key, tx) ->
+                                fraudAlertService.publishAlert(tx, FraudType.HIGH_AMOUNT)
+                        );
 
         // 3️⃣ High Velocity Fraud Rule (>3 txns in 10 sec)
         // Since key = accountId already,
@@ -75,6 +79,9 @@ public class FraudDetectionProcessor {
                                         Serdes.String(),
                                         transactionSerde
                                 )
+                        )
+                        .peek((key, tx) ->
+                                fraudAlertService.publishAlert(tx, FraudType.HIGH_VELOCITY)
                         );
 
         // 4️⃣ Merge Both Fraud Streams
@@ -86,7 +93,6 @@ public class FraudDetectionProcessor {
 
         combinedFraudStream
                 .peek((key, tx) -> {
-                    fraudAlertService.publishAlert(tx);
                     log.warn("🚨 FRAUD DETECTED :: {}", tx);
                 })
                 .to(ALERT_TOPIC,
