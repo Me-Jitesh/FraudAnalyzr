@@ -51,14 +51,12 @@ public class FraudDetectionProcessor {
         //  2️⃣ High Amount Fraud Rule
 
         KStream<String, Transaction> highAmountFraudStream =
-                txnStream.filter((key, tx) -> tx.getAmount() > 300000)
+                txnStream.filter((key, tx) -> tx.getAmount() > 400000)
                         .peek((key, tx) ->
                                 fraudAlertService.publishAlert(tx, FraudType.HIGH_AMOUNT)
                         );
 
         // 3️⃣ High Velocity Fraud Rule (>3 txns in 10 sec)
-        // Since key = accountId already,
-        // NO groupBy() needed → NO repartition topic created
 
         KStream<String, Transaction> rapidTxnFraudStream =
                 txnStream
@@ -66,18 +64,13 @@ public class FraudDetectionProcessor {
                         .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
                         .count(Materialized.as("txn-count-store"))
                         .toStream()
-                        .filter((windowedKey, count) -> count > 3)
+                        .filter((windowedKey, count) -> count == 4)
                         .map((windowedKey, count) ->
-                                KeyValue.pair(windowedKey.key(), windowedKey.key())
-                        )
-                        .join(
-                                txnStream,
-                                (key, transaction) -> transaction,
-                                JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
-                                StreamJoined.with(
-                                        Serdes.String(),
-                                        Serdes.String(),
-                                        transactionSerde
+                                KeyValue.pair(
+                                        windowedKey.key(),
+                                        Transaction.builder()
+                                                .accountId(windowedKey.key())
+                                                .build()
                                 )
                         )
                         .peek((key, tx) ->

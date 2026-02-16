@@ -80,7 +80,7 @@ public class TransactionController {
                         .build();
 
                 producerService.sendTransaction(payment);
-               // Thread.sleep(1000 * 2);
+                // Thread.sleep(1000 * 2);
             }
             log.info("✅ BULK PAYMENT DONE !");
             return ResponseEntity.ok("Bulk Transaction Completed  !");
@@ -136,7 +136,7 @@ public class TransactionController {
                         .build();
 
                 producerService.sendTransaction(payment);
-               // Thread.sleep(1000 * 2);
+                Thread.sleep(1000);
             }
             log.info("Bulk Payment {} Time Done !", num);
             return ResponseEntity.ok("Bulk Transaction N Time Completed  !");
