@@ -1,6 +1,7 @@
 package com.jitesh.fraudanalyzr.streams;
 
 import com.jitesh.fraudanalyzr.constants.FraudType;
+import com.jitesh.fraudanalyzr.models.FraudAlert;
 import com.jitesh.fraudanalyzr.models.Transaction;
 import com.jitesh.fraudanalyzr.serdes.TransactionSerde;
 import com.jitesh.fraudanalyzr.services.FraudAlertServiceImpl;
@@ -14,8 +15,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.support.serializer.JsonSerde;
 
 import java.time.Duration;
+import java.util.Date;
 
 @Slf4j
 @Configuration
@@ -50,46 +53,67 @@ public class FraudDetectionProcessor {
 
         //  2️⃣ High Amount Fraud Rule
 
-        KStream<String, Transaction> highAmountFraudStream =
-                txnStream.filter((key, tx) -> tx.getAmount() > 400000)
-                        .peek((key, tx) ->
-                                fraudAlertService.publishAlert(tx, FraudType.HIGH_AMOUNT)
+        KStream<String, FraudAlert> highAmountFraudStream =
+                txnStream
+                        .filter((key, tx) -> tx.getAmount() > 400000)
+                        .map((key, tx) ->
+                                KeyValue.pair(
+                                        key,
+                                        FraudAlert.builder()
+                                                .accountId(tx.getAccountId())
+                                                .transactionId(tx.getTransactionId())
+                                                .amount(tx.getAmount())
+                                                .merchant(tx.getMerchant())
+                                                .reason(FraudType.HIGH_AMOUNT.name())
+                                                .detectedAt(new Date())
+                                                .build()
+                                )
                         );
 
-        // 3️⃣ High Velocity Fraud Rule (>3 txns in 10 sec)
 
-        KStream<String, Transaction> rapidTxnFraudStream =
+        // 3️⃣ High Velocity Fraud Rule (>=3 txns in 10 sec)
+
+        KStream<String, FraudAlert> highVelocityFraudStream =
                 txnStream
                         .groupByKey(Grouped.with(Serdes.String(), transactionSerde))
                         .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
                         .count(Materialized.as("txn-count-store"))
                         .toStream()
-                        .filter((windowedKey, count) -> count == 4)
+                        .filter((windowedKey, count) -> count >= 3)
                         .map((windowedKey, count) ->
-                                KeyValue.pair(
-                                        windowedKey.key(),
-                                        Transaction.builder()
-                                                .accountId(windowedKey.key())
-                                                .build()
-                                )
+                                KeyValue.pair(windowedKey.key(), windowedKey.key())
                         )
-                        .peek((key, tx) ->
-                                fraudAlertService.publishAlert(tx, FraudType.HIGH_VELOCITY)
+                        .join(
+                                txnStream,
+                                (key, tx) ->
+                                        FraudAlert.builder()
+                                                .accountId(tx.getAccountId())
+                                                .transactionId(tx.getTransactionId())
+                                                .amount(tx.getAmount())
+                                                .merchant(tx.getMerchant())
+                                                .reason(FraudType.HIGH_VELOCITY.name())
+                                                .detectedAt(new Date())
+                                                .build(),
+                                JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
+                                StreamJoined.with(
+                                        Serdes.String(),
+                                        Serdes.String(),
+                                        transactionSerde
+                                )
                         );
+
 
         // 4️⃣ Merge Both Fraud Streams
 
-        KStream<String, Transaction> combinedFraudStream =
-                highAmountFraudStream.merge(rapidTxnFraudStream);
+        KStream<String, FraudAlert> fraudAlertStream =
+                highAmountFraudStream.merge(highVelocityFraudStream);
 
         // 5️⃣ Send to Fraud Alert Topic
 
-        combinedFraudStream
-                .peek((key, tx) -> {
-                    log.warn("🚨 FRAUD DETECTED :: {}", tx);
-                })
-                .to(ALERT_TOPIC,
-                        Produced.with(Serdes.String(), transactionSerde));
+        fraudAlertStream.to(
+                ALERT_TOPIC,
+                Produced.with(Serdes.String(), new JsonSerde<>(FraudAlert.class))
+        );
 
         return txnStream;
     }

@@ -11,6 +11,8 @@ import java.util.Date;
 public class FraudAlert {
     private String accountId;
     private String transactionId;
+    private Double amount;
+    private String merchant;
     private String reason;
     private Date detectedAt;
 }
