@@ -5,6 +5,7 @@ import com.jitesh.fraudanalyzr.models.FraudAlert;
 import com.jitesh.fraudanalyzr.models.Transaction;
 import com.jitesh.fraudanalyzr.serdes.TransactionSerde;
 import com.jitesh.fraudanalyzr.services.FraudAlertServiceImpl;
+import com.jitesh.fraudanalyzr.services.LogisticFraudModel;
 import com.jitesh.fraudanalyzr.services.StreamStatusServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.common.serialization.Serdes;
@@ -36,6 +37,9 @@ public class FraudDetectionProcessor {
     @Autowired
     private StreamStatusServiceImpl streamStatusService;
 
+    @Autowired
+    private LogisticFraudModel logisticRegressionModel;
+
     @Bean
     public KStream<String, Transaction> txnAnalyzer(StreamsBuilder builder) {
 
@@ -56,19 +60,25 @@ public class FraudDetectionProcessor {
         KStream<String, FraudAlert> highAmountFraudStream =
                 txnStream
                         .filter((key, tx) -> tx.getAmount() > 400000)
-                        .map((key, tx) ->
-                                KeyValue.pair(
-                                        key,
-                                        FraudAlert.builder()
-                                                .accountId(tx.getAccountId())
-                                                .transactionId(tx.getTransactionId())
-                                                .amount(tx.getAmount())
-                                                .merchant(tx.getMerchant())
-                                                .reason(FraudType.HIGH_AMOUNT.name())
-                                                .detectedAt(new Date())
-                                                .build()
-                                )
-                        );
+
+                        .map((key, tx) -> {
+
+                            int riskScore = logisticRegressionModel
+                                    .predictRiskScore(tx.getAmount(), 0);
+
+                            return KeyValue.pair(
+                                    key,
+                                    FraudAlert.builder()
+                                            .accountId(tx.getAccountId())
+                                            .transactionId(tx.getTransactionId())
+                                            .amount(tx.getAmount())
+                                            .merchant(tx.getMerchant())
+                                            .reason(FraudType.HIGH_AMOUNT.name())
+                                            .riskScore(riskScore)
+                                            .detectedAt(new Date())
+                                            .build()
+                            );
+                        });
 
 
         // 3️⃣ High Velocity Fraud Rule (>=3 txns in 10 sec)
@@ -79,21 +89,30 @@ public class FraudDetectionProcessor {
                         .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10)))
                         .count(Materialized.as("txn-count-store"))
                         .toStream()
+
                         .filter((windowedKey, count) -> count >= 3)
+
                         .map((windowedKey, count) ->
                                 KeyValue.pair(windowedKey.key(), windowedKey.key())
                         )
+
                         .join(
                                 txnStream,
-                                (key, tx) ->
-                                        FraudAlert.builder()
-                                                .accountId(tx.getAccountId())
-                                                .transactionId(tx.getTransactionId())
-                                                .amount(tx.getAmount())
-                                                .merchant(tx.getMerchant())
-                                                .reason(FraudType.HIGH_VELOCITY.name())
-                                                .detectedAt(new Date())
-                                                .build(),
+                                (key, tx) -> {
+
+                                    int riskScore = logisticRegressionModel
+                                            .predictRiskScore(tx.getAmount(), 1);
+
+                                    return FraudAlert.builder()
+                                            .accountId(tx.getAccountId())
+                                            .transactionId(tx.getTransactionId())
+                                            .amount(tx.getAmount())
+                                            .merchant(tx.getMerchant())
+                                            .reason(FraudType.HIGH_VELOCITY.name())
+                                            .riskScore(riskScore)
+                                            .detectedAt(new Date())
+                                            .build();
+                                },
                                 JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofSeconds(10)),
                                 StreamJoined.with(
                                         Serdes.String(),
@@ -101,7 +120,6 @@ public class FraudDetectionProcessor {
                                         transactionSerde
                                 )
                         );
-
 
         // 4️⃣ Merge Both Fraud Streams
 

@@ -14,5 +14,6 @@ public class FraudAlert {
     private Double amount;
     private String merchant;
     private String reason;
+    private Integer riskScore;
     private Date detectedAt;
 }

@@ -136,7 +136,7 @@ public class TransactionController {
                         .build();
 
                 producerService.sendTransaction(payment);
-                Thread.sleep(1000);
+                Thread.sleep(1000 * 2);
             }
             log.info("Bulk Payment {} Time Done !", num);
             return ResponseEntity.ok("Bulk Transaction N Time Completed  !");
