@@ -2,7 +2,7 @@ package com.jitesh.fraudanalyzr.controllers;
 
 
 import com.jitesh.fraudanalyzr.dto.StreamStatus;
-import com.jitesh.fraudanalyzr.services.StreamStatusService;
+import com.jitesh.fraudanalyzr.services.StreamStatusServiceImpl;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -10,9 +10,9 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin("*")
 public class StreamStatusController {
 
-    private final StreamStatusService streamStatusService;
+    private final StreamStatusServiceImpl streamStatusService;
 
-    public StreamStatusController(StreamStatusService streamStatusService) {
+    public StreamStatusController(StreamStatusServiceImpl streamStatusService) {
         this.streamStatusService = streamStatusService;
     }
 
